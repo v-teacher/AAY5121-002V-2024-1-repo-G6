@@ -1,0 +1,39 @@
+#Creacion Maquina Virtual
+
+New-AzVm -ResourceGroupName 'PruebaAzureGroup' -Name 'myVM-Prueba' -Location 'EastUS' -Image 'MicrosoftWindowsServer:WindowsServer:2019-datacenter-gensecond:latest' -VirtualNetworkName 'PruebaAzureMachine' -SubnetName 'Mi-SubnetName' -SecurityGroupName 'mySecurityGroupPrueba' -PublicIpAddressName 'myPublicIpAddress' -OpenPorts 80,3389 -Size Standard_DS1_v2
+
+Invoke-AzVMRunCommand -ResourceGroupName 'PruebaAzureGroup' -VMName 'myVM-Prueba' -CommandId 'RunPowerShellScript' -ScriptString 'Install-WindowsFeature -Name Web-Server -IncludeManagementTools'
+
+
+
+
+#Creacion Server y base de datos
+
+# Set variables for your server and database
+   $resourceGroupName = "PruebaAZURE"
+   $location = "eastus"
+   $adminLogin = "azureuser"
+   $password = "Duoc2024."
+   $serverName = "mysqlserver-$(Get-Random)"
+   $databaseName = "mySampleDatabase"
+
+# The ip address range that you want to allow to access your server
+   $startIp = "0.0.0.0"
+   $endIp = "0.0.0.0"
+
+# Show randomized variables
+   Write-host "Resource group name is" $resourceGroupName
+   Write-host "Server name is" $serverName
+
+Write-host "Creating resource group..."
+   $resourceGroup = New-AzResourceGroup -Name $resourceGroupName -Location $location -Tag @{Owner="SQLDB-Samples"}
+
+Write-host "Creating primary server..."
+   $server = New-AzSqlServer -ResourceGroupName $resourceGroupName -ServerName $serverName -Location $location -SqlAdministratorCredentials $(New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $adminLogin, $(ConvertTo-SecureString -String $password -AsPlainText -Force))
+
+Write-host "Configuring server firewall rule..."
+   $serverFirewallRule = New-AzSqlServerFirewallRule -ResourceGroupName $resourceGroupName -ServerName $serverName -FirewallRuleName "AllowedIPs" -StartIpAddress $startIp -EndIpAddress $endIp
+
+Write-host "Creating a gen5 2 vCore serverless database..."
+   $database = New-AzSqlDatabase  -ResourceGroupName $resourceGroupName -ServerName $serverName -DatabaseName $databaseName -Edition GeneralPurpose -ComputeModel Serverless -ComputeGeneration Gen5 -VCore 2 -MinimumCapacity 2 -SampleName "AdventureWorksLT"
+   $database
